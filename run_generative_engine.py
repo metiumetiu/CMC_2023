@@ -61,6 +61,16 @@ if __name__ == '__main__':
     #                              z_stds_dict=z_stds_dict,
     #                              scale_means_factor=1.0, scale_stds_factor=1.0)
 
+    groovePattern_A_z = get_random_sample_from_style_noDrumGeneration(style_="global",
+                                  z_means_dict=z_means_dict,
+                                  z_stds_dict=z_stds_dict,
+                                  scale_means_factor=1.0, scale_stds_factor=1.0)
+
+    groovePattern_B_z = get_random_sample_from_style_noDrumGeneration(style_="soul",
+                                  z_means_dict=z_means_dict,
+                                  z_stds_dict=z_stds_dict,
+                                  scale_means_factor=1.0, scale_stds_factor=1.0)
+
     # ------  Create an empty an empty torch tensor
     input_tensor = torch.zeros((1, 32, 3))
 
@@ -87,6 +97,9 @@ if __name__ == '__main__':
     # ---------------------------------------------------------- #
 
     def process_message_from_queue(address, args):
+        print("Address; ".format(address))
+        print("Args; ".format(args))
+              
         if "VelutimeIndex" in address:
             input_tensor[:, int(args[2]), 0] = 1 if args[0] > 0 else 0  # set hit
             input_tensor[:, int(args[2]), 1] = args[0] / 127  # set velocity
@@ -100,6 +113,9 @@ if __name__ == '__main__':
         elif "time_between_generations" in address:
             global min_wait_time_btn_gens
             min_wait_time_btn_gens = args[0]
+        elif "interp_slider_1" in address:
+            # print("interp_slider_1 received")
+            recalculate_z1(args[0])
         else:
             print ("Unknown Message Received, address {}, value {}".format(address, args))
     # python-osc method for establishing the UDP communication with pd
@@ -108,6 +124,10 @@ if __name__ == '__main__':
 
     # ---------------------------------------------------------- #
 
+    def recalculate_z1(_args):
+        print("recalculate_z1 triggered")
+        print(_args)
+        return
 
     # ------------------ NOTE GENERATION  ------------------ #
     # drum_voice_pitch_map = {"kick": 36, 'snare': 38, 'tom-1': 47, 'tom-2': 42, 'chat': 64, 'ohat': 63}
