@@ -10,6 +10,7 @@ from pythonosc.udp_client import SimpleUDPClient
 import queue
 import pickle
 import os
+import numpy
 
 # Parser for terminal commands
 import argparse
@@ -32,6 +33,7 @@ parser.add_argument('--show_count', type=bool, default=True,
 #                     required=False)
 
 args = parser.parse_args()
+print(args)
 
 if __name__ == '__main__':
     # ------------------ Load Trained Model  ------------------ #
@@ -47,29 +49,80 @@ if __name__ == '__main__':
     # load per style means/stds of z encodings
     file = open(os.path.join(model_path, "z_means.pkl"), 'rb')
     z_means_dict = pickle.load(file)
-    print(z_means_dict)
+    # print(z_means_dict)
     file.close()
     file = open(os.path.join(model_path, "z_stds.pkl"), 'rb')
     z_stds_dict = pickle.load(file)
 
     print("Available styles: ", list(z_means_dict.keys()))
-    # get_random_sample_from_style(style_="global",
-    #                              model_=groove_transformer_vae,
-    #                              voice_thresholds_=voice_thresholds,
-    #                              voice_max_count_allowed_=voice_max_count_allowed,
-    #                              z_means_dict=z_means_dict,
-    #                              z_stds_dict=z_stds_dict,
-    #                              scale_means_factor=1.0, scale_stds_factor=1.0)
 
-    groovePattern_A_z = get_random_sample_from_style_noDrumGeneration(style_="global",
-                                  z_means_dict=z_means_dict,
-                                  z_stds_dict=z_stds_dict,
-                                  scale_means_factor=1.0, scale_stds_factor=1.0)
+    ############### GLOBAL VARIABLES ###############
+    groovePattern_A_z = numpy.zeros(128)
+    def regeneratePatternA_FromStyleNum(styleNum):
+        if styleNum >= 0 and styleNum <= 11:
+            styleName = list(z_means_dict.keys())[styleNum]
+            global groovePattern_A_z
+            groovePattern_A_z = get_random_sample_from_style_noDrumGeneration(style_= styleName,
+                                    z_means_dict = z_means_dict,
+                                    z_stds_dict = z_stds_dict,
+                                    scale_means_factor = 1.0, scale_stds_factor = 1.0)
+            # print(f'Generated random groove pattern A out of style {styleName}')
+            # print(groovePattern_A_z)
+    regeneratePatternA_FromStyleNum(0)
 
-    groovePattern_B_z = get_random_sample_from_style_noDrumGeneration(style_="soul",
-                                  z_means_dict=z_means_dict,
-                                  z_stds_dict=z_stds_dict,
-                                  scale_means_factor=1.0, scale_stds_factor=1.0)
+    groovePattern_B_z = numpy.zeros(128)
+    def regeneratePatternB_FromStyleNum(styleNum):
+        if styleNum >= 0 and styleNum <= 11:
+            styleName = list(z_means_dict.keys())[styleNum]
+            global groovePattern_B_z
+            groovePattern_B_z = get_random_sample_from_style_noDrumGeneration(style_ = styleName,
+                                        z_means_dict = z_means_dict,
+                                        z_stds_dict = z_stds_dict,
+                                        scale_means_factor = 1.0, scale_stds_factor = 1.0)
+            # print(f'Generated random groove pattern B out of style {styleName}')
+            # print(groovePattern_B_z)
+    regeneratePatternB_FromStyleNum(1)
+
+    # TEST interpolation
+    '''
+    patA = [0., 0., 0., 0., 0.]
+    patB = [1., 1., 1., 1., 1.]
+    print(get_interpolated_z_from_zs(patA, patB, 0.4))
+    '''
+
+    # at PD patch startup, the slider is all the way to the left
+    interpolatedPattern_z = groovePattern_A_z
+    slider1_LastInterpValue = 0.
+    slider2_LastInterpValue = 0.
+    slider3_LastInterpValue = 0.
+    slider4_LastInterpValue = 0.
+
+    loadPatternA_Path = str()
+    savePatternA_Path = str()
+    loadPatternB_Path = str()
+    savePatternB_Path = str()
+
+    def loadPatternA(picklePath):
+        file = open(picklePath, 'rb')
+        global groovePattern_A_z
+        groovePattern_A_z = pickle.load(file)
+
+    def savePatternA(picklePath):
+        file = open(picklePath, 'wb')
+        global groovePattern_A_z
+        pickle.dump(groovePattern_A_z, file)
+
+    def loadPatternB(picklePath):
+        file = open(picklePath, 'rb')
+        global groovePattern_B_z
+        groovePattern_B_z = pickle.load(file)
+
+    def savePatternB(picklePath):
+        file = open(picklePath, 'wb')
+        global groovePattern_B_z
+        pickle.dump(groovePattern_B_z, file)
+
+    (h_new, v_new, o_new) = (torch.zeros((1, 32, 9)), torch.zeros((1, 32, 9)), torch.zeros((1, 32, 9)))
 
     # ------  Create an empty an empty torch tensor
     input_tensor = torch.zeros((1, 32, 3))
@@ -114,8 +167,43 @@ if __name__ == '__main__':
             global min_wait_time_btn_gens
             min_wait_time_btn_gens = args[0]
         elif "interp_slider_1" in address:
-            # print("interp_slider_1 received")
-            recalculate_z1(args[0])
+            print("interp_slider_1 received")
+            global slider1_LastInterpValue
+            slider1_LastInterpValue = args[0] 
+        elif "interp_slider_2" in address:
+            global slider2_LastInterpValue
+            slider2_LastInterpValue = args[0] 
+            print("interp_slider_2 received")
+        elif "interp_slider_3" in address:
+            global slider3_LastInterpValue
+            slider3_LastInterpValue = args[0] 
+            print("interp_slider_3 received")
+        elif "interp_slider_4" in address:
+            global slider4_LastInterpValue
+            slider4_LastInterpValue = args[0] 
+            print("interp_slider_4 received")
+        elif "gen_new_patternA_with_style" in address:
+            print("gen_new_patternA_with_style received")
+            regeneratePatternA_FromStyleNum(int(args[0]))
+        elif "gen_new_patternB_with_style" in address:
+            print("gen_new_patternB_with_style received")
+            regeneratePatternB_FromStyleNum(int(args[0]))
+        elif "load_patternA_path" in address:
+            print("load_patternA_path received")
+            # print(args[0])
+            loadPatternA(args[0])
+        elif "save_patternA_path" in address:
+            print("save_patternA_path received")
+            # print(args[0])
+            savePatternA(args[0])
+        elif "load_patternB_path" in address:
+            print("load_patternB_path received")
+            # print(args[0])
+            loadPatternB(args[0])
+        elif "save_patternB_path" in address:
+            print("save_patternB_path received")
+            # print(args[0])
+            savePatternB(args[0])
         else:
             print ("Unknown Message Received, address {}, value {}".format(address, args))
     # python-osc method for establishing the UDP communication with pd
@@ -124,10 +212,23 @@ if __name__ == '__main__':
 
     # ---------------------------------------------------------- #
 
-    def recalculate_z1(_args):
-        print("recalculate_z1 triggered")
-        print(_args)
-        return
+    def recalculate_z(sliderNum, interpValue):
+        # print(f"recalculate_z triggered, patterns size; {groovePattern_A_z.shape, groovePattern_B_z.shape}")
+        startIndex = 0
+        endIndex = 0
+        if sliderNum == 1:
+            startIndex = 0
+        elif sliderNum == 2:
+            startIndex = 32
+        elif sliderNum == 3:
+            startIndex = 64
+        elif sliderNum == 4:
+            startIndex = 96
+        endIndex = startIndex + 32
+        # print(f'Interpolated pattern before slider change; {interpolatedPattern_z}')
+        interpolatedPattern_z[startIndex:endIndex] = get_interpolated_z_from_zs(groovePattern_A_z[startIndex:endIndex], groovePattern_B_z[startIndex:endIndex], interpValue)
+        # print(f'Interpolated pattern after slider change; {interpolatedPattern_z}')
+        # return         
 
     # ------------------ NOTE GENERATION  ------------------ #
     # drum_voice_pitch_map = {"kick": 36, 'snare': 38, 'tom-1': 47, 'tom-2': 42, 'chat': 64, 'ohat': 63}
@@ -137,6 +238,7 @@ if __name__ == '__main__':
     count = 0
     while (1):
         address, args = message_queue.get()
+        # print('args', args)
         process_message_from_queue(address, args)
 
         # only generate new pattern when there isnt any other osc messages backed up for processing in the message_queue
@@ -146,43 +248,50 @@ if __name__ == '__main__':
             # ----------------------------------------------------------------------------------------------- #
             # EITHER GENERATE USING GROOVE OR GENERATE A RANDOM PATTERN
 
-            # case 1. generate using groove
-            h_new, v_new, o_new = generate_from_groove(
-                model_=groove_transformer_vae,
-                in_groove=input_tensor,
-                voice_thresholds_=voice_thresholds,
-                voice_max_count_allowed_=voice_max_count_allowed)
-
-            # case 2. generate randomly
-            # h_new, v_new, o_new = generate_random_pattern(
-            #     model_=groove_transformer_vae,
-            #     voice_thresholds_=voice_thresholds,
-            #     voice_max_count_allowed_=voice_max_count_allowed,
-            #     means_dict=z_means_dict,
-            #     stds_dict=z_stds_dict,
-            #     style="funk"
-            # )
-
-            # ----------------------------------------------------------------------------------------------- #
-            # ----------------------------------------------------------------------------------------------- #
-            # send to pd
-            osc_messages_to_send = get_new_drum_osc_msgs((h_new, v_new, o_new))
-            number_of_generations += 1
-
-            # First clear generations on pd by sending a message
-            py_to_pd_OscSender.send_message("/reset_table", 1)
-
-            # Then send over generated notes one at a time
-            for (address, h_v_ix_tuple) in osc_messages_to_send:
-                py_to_pd_OscSender.send_message(address, h_v_ix_tuple)
-
-            if show_count:
-                print("Generation #", count)
-
-            # Message pd that sent is over by sending the counter value for number of generations
-            # used so to take snapshots in pd
-            py_to_pd_OscSender.send_message("/generation_count", count)
-
-            count += 1
-
+            if "interp_slider" in address:
+                if "interp_slider_1" in address:
+                    recalculate_z(1, args[0])
+                elif "interp_slider_2" in address:
+                    recalculate_z(2, args[0])
+                elif "interp_slider_3" in address:
+                    recalculate_z(3, args[0])
+                elif "interp_slider_4" in address:
+                    recalculate_z(4, args[0])
+                # print(interpolatedPattern_z)
+                h_new , v_new , o_new = decode_z_into_drums(groove_transformer_vae, interpolatedPattern_z, voice_thresholds, voice_max_count_allowed)
+                osc_messages_to_send = get_new_drum_osc_msgs((h_new, v_new, o_new))
+                number_of_generations += 1
+                # First clear generations on pd by sending a message
+                py_to_pd_OscSender.send_message("/reset_table", 1)
+                # Then send over generated notes one at a time
+                for (address, h_v_ix_tuple) in osc_messages_to_send:
+                    py_to_pd_OscSender.send_message(address, h_v_ix_tuple)
+                if show_count:
+                    print("Generation #", count)
+                # Message pd that sent is over by sending the counter value for number of generations
+                # used so to take snapshots in pd
+                py_to_pd_OscSender.send_message("/generation_count", count)
+                count += 1
+            elif "gen_new_patternA_with_style" in address or  "gen_new_patternB_with_style" in address or "load_patternA_path" in address or  "load_patternB_path" in address:
+                recalculate_z(1, slider1_LastInterpValue)
+                recalculate_z(2, slider2_LastInterpValue)
+                recalculate_z(3, slider3_LastInterpValue)
+                recalculate_z(4, slider4_LastInterpValue)
+                h_new , v_new , o_new = decode_z_into_drums(groove_transformer_vae, interpolatedPattern_z, voice_thresholds, voice_max_count_allowed)
+                osc_messages_to_send = get_new_drum_osc_msgs((h_new, v_new, o_new))
+                number_of_generations += 1
+                # First clear generations on pd by sending a message
+                py_to_pd_OscSender.send_message("/reset_table", 1)
+                # Then send over generated notes one at a time
+                for (address, h_v_ix_tuple) in osc_messages_to_send:
+                    py_to_pd_OscSender.send_message(address, h_v_ix_tuple)
+                if show_count:
+                    print("Generation #", count)
+                # Message pd that sent is over by sending the counter value for number of generations
+                # used so to take snapshots in pd
+                py_to_pd_OscSender.send_message("/generation_count", count)
+                count += 1
+            else:
+                print('not our slider')
+                
             time.sleep(min_wait_time_btn_gens)

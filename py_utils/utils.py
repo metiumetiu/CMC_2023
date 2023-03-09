@@ -87,6 +87,29 @@ def get_random_sample_from_style(style_, model_,
     h_,v_,o_ = decode_z_into_drums(model_, z, voice_thresholds_, voice_max_count_allowed_)
     return z, (h_, v_, o_)
 
+def get_random_sample_from_style_noDrumGeneration(style_,
+                                 z_means_dict, z_stds_dict,
+                                 scale_means_factor=1.0, scale_stds_factor=1.0):
+
+    assert style_ in z_means_dict.keys(), f"Make sure the style is one of {list(z_means_dict.keys())}"
+    z = np.random.normal(loc=np.array(z_means_dict[style_]) * scale_means_factor,
+                         scale=np.array(z_stds_dict[style_]) * scale_stds_factor)
+    # print(f'get_random_sample_from_style_noDrumGeneration : {type(z), z.shape}')
+    return z
+
+def get_interpolated_z_from_zs(z_dictA, z_dictB, interpValue):
+    # print(f'Interpolating 2 lists of length : {len(z_dictA), len(z_dictB)} with interp value {interpValue}')
+    newInterpZ = np.zeros(len(z_dictA))
+    for zPattern_Iterator in range(len(z_dictA)):
+        scaledInterpValue = (np.abs(z_dictB[zPattern_Iterator] - z_dictA[zPattern_Iterator]) * interpValue)
+        if z_dictA[zPattern_Iterator] < z_dictB[zPattern_Iterator]:
+            newInterpZ[zPattern_Iterator] = z_dictA[zPattern_Iterator] + scaledInterpValue
+        elif z_dictA[zPattern_Iterator] > z_dictB[zPattern_Iterator]:
+            newInterpZ[zPattern_Iterator] = z_dictA[zPattern_Iterator] - scaledInterpValue
+        else: # z in the same in both pattern A and B at this index
+            newInterpZ[zPattern_Iterator] = z_dictA[zPattern_Iterator]
+    return newInterpZ
+
 def load_model(model_name, model_path):
 
     # Initialize model
