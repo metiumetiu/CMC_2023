@@ -102,6 +102,15 @@ if __name__ == '__main__':
     loadPatternB_Path = str()
     savePatternB_Path = str()
 
+    slider1_lower_zInterp_Bound = 0
+    slider1_upper_zInterp_Bound = 31
+    slider2_lower_zInterp_Bound = 32
+    slider2_upper_zInterp_Bound = 63
+    slider3_lower_zInterp_Bound = 64
+    slider3_upper_zInterp_Bound = 95
+    slider4_lower_zInterp_Bound = 96
+    slider4_upper_zInterp_Bound = 127
+
     def loadPatternA(picklePath):
         file = open(picklePath, 'rb')
         global groovePattern_A_z
@@ -167,21 +176,21 @@ if __name__ == '__main__':
             global min_wait_time_btn_gens
             min_wait_time_btn_gens = args[0]
         elif "interp_slider_1" in address:
-            print("interp_slider_1 received")
+            # print("interp_slider_1 received")
             global slider1_LastInterpValue
             slider1_LastInterpValue = args[0] 
         elif "interp_slider_2" in address:
             global slider2_LastInterpValue
             slider2_LastInterpValue = args[0] 
-            print("interp_slider_2 received")
+            # print("interp_slider_2 received")
         elif "interp_slider_3" in address:
             global slider3_LastInterpValue
             slider3_LastInterpValue = args[0] 
-            print("interp_slider_3 received")
+            # print("interp_slider_3 received")
         elif "interp_slider_4" in address:
             global slider4_LastInterpValue
             slider4_LastInterpValue = args[0] 
-            print("interp_slider_4 received")
+            # print("interp_slider_4 received")
         elif "gen_new_patternA_with_style" in address:
             print("gen_new_patternA_with_style received")
             regeneratePatternA_FromStyleNum(int(args[0]))
@@ -204,6 +213,38 @@ if __name__ == '__main__':
             print("save_patternB_path received")
             # print(args[0])
             savePatternB(args[0])
+        elif "slider1_lower_zInterp_Bound" in address:
+            global slider1_lower_zInterp_Bound
+            slider1_lower_zInterp_Bound = int(args[0])
+            # print(slider1_lower_zInterp_Bound)
+        elif "slider1_upper_zInterp_Bound" in address:
+            global slider1_upper_zInterp_Bound
+            slider1_upper_zInterp_Bound = int(args[0])
+            # print(slider1_upper_zInterp_Bound)
+        elif "slider2_lower_zInterp_Bound" in address:
+            global slider2_lower_zInterp_Bound
+            slider2_lower_zInterp_Bound = int(args[0])
+            # print(slider2_lower_zInterp_Bound)
+        elif "slider2_upper_zInterp_Bound" in address:
+            global slider2_upper_zInterp_Bound
+            slider2_upper_zInterp_Bound = int(args[0])
+            # print(slider2_upper_zInterp_Bound)
+        elif "slider3_lower_zInterp_Bound" in address:
+            global slider3_lower_zInterp_Bound
+            slider3_lower_zInterp_Bound = int(args[0])
+            # print(slider3_lower_zInterp_Bound)
+        elif "slider3_upper_zInterp_Bound" in address:
+            global slider3_upper_zInterp_Bound
+            slider3_upper_zInterp_Bound = int(args[0])
+            # print(slider3_upper_zInterp_Bound)
+        elif "slider4_lower_zInterp_Bound" in address:
+            global slider4_lower_zInterp_Bound
+            slider4_lower_zInterp_Bound = int(args[0])
+            # print(slider4_lower_zInterp_Bound)
+        elif "slider4_upper_zInterp_Bound" in address:
+            global slider4_upper_zInterp_Bound
+            slider4_upper_zInterp_Bound = int(args[0])
+            # print(slider4_upper_zInterp_Bound)
         else:
             print ("Unknown Message Received, address {}, value {}".format(address, args))
     # python-osc method for establishing the UDP communication with pd
@@ -217,14 +258,25 @@ if __name__ == '__main__':
         startIndex = 0
         endIndex = 0
         if sliderNum == 1:
-            startIndex = 0
+            global slider1_lower_zInterp_Bound
+            global slider1_upper_zInterp_Bound
+            startIndex = slider1_lower_zInterp_Bound
+            endIndex = slider1_upper_zInterp_Bound
         elif sliderNum == 2:
-            startIndex = 32
+            global slider2_lower_zInterp_Bound
+            global slider2_upper_zInterp_Bound
+            startIndex = slider2_lower_zInterp_Bound
+            endIndex = slider2_upper_zInterp_Bound
         elif sliderNum == 3:
-            startIndex = 64
+            global slider3_lower_zInterp_Bound
+            global slider3_upper_zInterp_Bound
+            startIndex = slider3_lower_zInterp_Bound
+            endIndex = slider3_upper_zInterp_Bound
         elif sliderNum == 4:
-            startIndex = 96
-        endIndex = startIndex + 32
+            global slider4_lower_zInterp_Bound
+            global slider4_upper_zInterp_Bound
+            startIndex = slider4_lower_zInterp_Bound
+            endIndex = slider4_upper_zInterp_Bound
         # print(f'Interpolated pattern before slider change; {interpolatedPattern_z}')
         interpolatedPattern_z[startIndex:endIndex] = get_interpolated_z_from_zs(groovePattern_A_z[startIndex:endIndex], groovePattern_B_z[startIndex:endIndex], interpValue)
         # print(f'Interpolated pattern after slider change; {interpolatedPattern_z}')
@@ -272,6 +324,7 @@ if __name__ == '__main__':
                 # used so to take snapshots in pd
                 py_to_pd_OscSender.send_message("/generation_count", count)
                 count += 1
+            # or  "slider1_lower_zInterp_Bound" in address or  "slider1_upper_zInterp_Bound" in address or  "slider2_lower_zInterp_Bound" in address or  "slider2_upper_zInterp_Bound" in address or  "slider3_lower_zInterp_Bound" in address or  "slider3_upper_zInterp_Bound" in address or  "slider4_lower_zInterp_Bound" in address or  "slider4_upper_zInterp_Bound" in address
             elif "gen_new_patternA_with_style" in address or  "gen_new_patternB_with_style" in address or "load_patternA_path" in address or  "load_patternB_path" in address:
                 recalculate_z(1, slider1_LastInterpValue)
                 recalculate_z(2, slider2_LastInterpValue)
